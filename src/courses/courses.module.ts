@@ -11,5 +11,6 @@ import { FacultiesModule } from 'src/faculties/faculties.module';
   imports: [TypeOrmModule.forFeature([Course]),AuthModule,FacultiesModule],
   controllers: [CoursesController],
   providers: [CoursesService],
+  exports: [CoursesService,TypeOrmModule],
 })
 export class CoursesModule {}

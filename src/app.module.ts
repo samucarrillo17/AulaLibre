@@ -6,10 +6,19 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FacultiesModule } from './faculties/faculties.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import KeyvRedis, { createKeyv, Keyv } from '@keyv/redis';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
+
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => ({
+        stores: [createKeyv('redis://localhost:6379')],
+      }),
+    }),
 
     TypeOrmModule.forRoot({
       type: 'postgres',

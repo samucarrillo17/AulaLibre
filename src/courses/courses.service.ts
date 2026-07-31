@@ -17,8 +17,6 @@ export class CoursesService {
     private readonly dataSource: DataSource,
   ) {}
 
-  //TODO: Revisar bien en que metodo es coveniente traer los comentarios de los cursos
-  //TODO: Agregar limte de comentarios por curso o paginacion
 
   async createCourse(createCourseDto: CreateCourseDto, idFaculty: string) {
     const existingFaculty = await this.facultiService.findOne(idFaculty);
@@ -34,7 +32,7 @@ export class CoursesService {
 
     return course;
   }
-
+  //TODO: Agregar paginacion, limite y ofset en findAll y cacheo en Redis
   findAll() {
     const Allcourses = this.courseRepository.find();
 

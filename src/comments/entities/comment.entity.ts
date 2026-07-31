@@ -18,7 +18,7 @@ export class Comment {
   @Column('text')
   authorHash!: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({select: false})
   createdAt!: Date;
 
   @ManyToOne(() => Course, (course) => course.comments)

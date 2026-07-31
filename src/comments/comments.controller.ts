@@ -1,29 +1,53 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+import { Auth } from 'src/auth/decorator/auth.decorator';
+import { GetUser } from 'src/auth/decorator/get-user.decorator';
+import { PaginationDto } from './dto/pagination.dto';
 
-@Controller('comments')
+@Controller('comment')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
-  @Post()
-  create(@Body() createCommentDto: CreateCommentDto) {
-    return this.commentsService.create(createCommentDto);
+  @Post(':idCourse')
+  @Auth()
+  create(
+    @Body() createCommentDto: CreateCommentDto,
+    @GetUser('id') userId: string,
+    @Param('idCourse') idCourse: string,
+  ) {
+    return this.commentsService.create(createCommentDto, userId, idCourse);
   }
 
   @Get(':id')
-  findAllCommentsToCourse(@Param('id') id: string) {
-    return this.commentsService.findAllComments();
+  @Auth()
+  findAllCommentsToCourse(
+    @Param('id') idCourse: string,
+    @Query() paginationDto: PaginationDto)
+  {
+    return this.commentsService.findAllComments(idCourse, paginationDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCommentDto: UpdateCommentDto) {
-    return this.commentsService.update(+id, updateCommentDto);
+  @Patch(':idComment')
+  @Auth()
+  updateComment(
+    @Param('idComment') idComment: string,
+    @Body() updateCommentDto: UpdateCommentDto,
+    @GetUser('id') userId: string,
+    @Query('course') idCourse: string,
+  ) {
+    return this.commentsService.update(
+      idComment,
+      updateCommentDto,
+      userId,
+      idCourse,
+    );
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.commentsService.remove(+id);
+  @Delete(':idComment')
+  @Auth()
+  remove(@Param('idComment') idComment: string, @GetUser('id') userId: string, @Query('course') idCourse: string) {
+    return this.commentsService.remove(idComment, userId, idCourse);
   }
 }

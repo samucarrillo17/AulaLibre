@@ -1,13 +1,12 @@
-import { IsDate, IsString } from "class-validator";
+import { IsDate, IsString, Max, Min } from "class-validator";
 
 export class CreateCommentDto {
 
     @IsString()
-    id!: string;
-
-    @IsString()
+    @Min(1)
+    @Max(200)
     description!: string;
 
-    @IsDate()
-    createdAt!: Date;
+    
+
 }

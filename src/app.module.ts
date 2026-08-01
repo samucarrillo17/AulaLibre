@@ -8,6 +8,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FacultiesModule } from './faculties/faculties.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis, { createKeyv, Keyv } from '@keyv/redis';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -35,8 +37,22 @@ import KeyvRedis, { createKeyv, Keyv } from '@keyv/redis';
     CoursesModule,
     AuthModule,
     FacultiesModule,
+
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 120,
+          limit: 100,
+        },
+      ],
+    }),
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard
+    }
+  ],
 })
 export class AppModule {}

@@ -4,6 +4,7 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { Auth } from 'src/auth/decorator/auth.decorator';
 import { ValidRoles } from 'src/auth/interfaces/valid-roles.interface';
+import { PaginationCourseDto } from './dto/pagination-course.dto';
 
 @Controller('course')
 export class CoursesController {
@@ -20,8 +21,8 @@ export class CoursesController {
 
   @Get()
   @Auth()
-  findAll() {
-    return this.coursesService.findAll();
+  findAll(@Query() paginationCourseDto: PaginationCourseDto) {
+    return this.coursesService.findAll(paginationCourseDto);
   }
 
   @Get(':term')

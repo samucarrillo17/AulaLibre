@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -47,9 +47,9 @@ export class UserService {
     return userExists;
   }
 
-  private handleDBException(err: any) {
+  private handleDBException(err: any):never {
     if (err.code === '23505') {
-      throw new Error('Usuario ya existe');
+      throw new BadRequestException(err.detail);
     }
     this.logger.error(err.message);
     throw new InternalServerErrorException(

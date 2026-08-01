@@ -16,7 +16,7 @@ import { CoursesService } from 'src/courses/courses.service';
 import { createHash } from 'crypto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-import { PaginationDto } from './dto/pagination.dto';
+import { PaginationCommentDto } from './dto/pagination-comment.dto';
 
 @Injectable()
 export class CommentsService {
@@ -36,7 +36,7 @@ export class CommentsService {
     userId: string,
     idCourse: string,
   ) {
-    const key = 'comments'; // Key para el Redis
+    const key = `comment:${idCourse}`;
 
     const existingCourse = await this.courseService.findOne(idCourse);
 
@@ -69,12 +69,12 @@ export class CommentsService {
 
     return commentBD;
   }
-  //TODO: Agregar paginacion, limite y ofset en findAllComments
-  async findAllComments(idCourse: string, paginationDto: PaginationDto) {
+
+  async findAllComments(idCourse: string, paginationDto: PaginationCommentDto) {
     const { limit = 10, page = 1 } = paginationDto;
     const offset = (page - 1) * limit;
 
-    const key = 'comments';
+    const key = `comment:${idCourse}`;
     const redisConsult = await this.cacheManager.get(key);
 
     if (redisConsult) {
@@ -88,7 +88,7 @@ export class CommentsService {
     }
 
     const [data, total] = await this.commentRepository.findAndCount({
-      take: limit, 
+      take: limit,
       skip: offset,
       order: { createdAt: 'DESC' },
       where: { course: { id: idCourse } },
@@ -96,13 +96,13 @@ export class CommentsService {
 
     await this.cacheManager.set(key, data, 1000 * 60 * 10);
 
-    return{
+    return {
       total,
       page,
       limit,
       lastPage: Math.ceil(total / limit),
       data,
-    } ;
+    };
   }
 
   async update(

@@ -1,10 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { Auth } from 'src/auth/decorator/auth.decorator';
 import { GetUser } from 'src/auth/decorator/get-user.decorator';
-import { PaginationDto } from './dto/pagination.dto';
+import { PaginationCommentDto } from './dto/pagination-comment.dto';
 
 @Controller('comment')
 export class CommentsController {
@@ -24,8 +33,8 @@ export class CommentsController {
   @Auth()
   findAllCommentsToCourse(
     @Param('id') idCourse: string,
-    @Query() paginationDto: PaginationDto)
-  {
+    @Query() paginationDto: PaginationCommentDto,
+  ) {
     return this.commentsService.findAllComments(idCourse, paginationDto);
   }
 
@@ -47,7 +56,11 @@ export class CommentsController {
 
   @Delete(':idComment')
   @Auth()
-  remove(@Param('idComment') idComment: string, @GetUser('id') userId: string, @Query('course') idCourse: string) {
+  remove(
+    @Param('idComment') idComment: string,
+    @GetUser('id') userId: string,
+    @Query('course') idCourse: string,
+  ) {
     return this.commentsService.remove(idComment, userId, idCourse);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -7,6 +7,9 @@ import { DataSource, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
 import { FacultiesService } from 'src/faculties/faculties.service';
 import { Faculty } from 'src/faculties/entities/faculty.entity';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { PaginationCourseDto } from './dto/pagination-course.dto';
+import type{ Cache } from 'cache-manager';
 
 @Injectable()
 export class CoursesService {
@@ -15,8 +18,10 @@ export class CoursesService {
     private readonly courseRepository: Repository<Course>,
     private readonly facultiService: FacultiesService,
     private readonly dataSource: DataSource,
-  ) {}
 
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
+  ) {}
 
   async createCourse(createCourseDto: CreateCourseDto, idFaculty: string) {
     const existingFaculty = await this.facultiService.findOne(idFaculty);
@@ -32,11 +37,32 @@ export class CoursesService {
 
     return course;
   }
-  //TODO: Agregar paginacion, limite y ofset en findAll y cacheo en Redis
-  findAll() {
-    const Allcourses = this.courseRepository.find();
+ 
+  async findAll(paginationCourseDto: PaginationCourseDto) {
+    const key = 'courses:all';
+    const { limit = 10, page = 1 } = paginationCourseDto;
+    const offset = (page - 1) * limit;
 
-    return Allcourses;
+    const redisConsult = await this.cacheManager.get(key);
+
+    if (redisConsult) {
+      return redisConsult;
+    }
+
+    const [data, total] = await this.courseRepository.findAndCount({
+      take: limit,
+      skip: offset,
+    });
+
+    await this.cacheManager.set(key, data, 1000 * 60 * 10);
+
+    return {
+      total,
+      page,
+      limit,
+      lastPage: Math.ceil(total / limit),
+      data,
+    };
   }
 
   async findOne(term: string) {

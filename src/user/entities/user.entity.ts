@@ -1,6 +1,7 @@
 import { ValidRoles } from 'src/auth/interfaces/valid-roles.interface';
 import {
   BeforeInsert,
+  BeforeUpdate,
   Column,
   CreateDateColumn,
   Entity,
@@ -37,9 +38,17 @@ export class User {
   @CreateDateColumn()
   createdAt!: Date;
 
-
   @BeforeInsert()
   LOWERCASE_EMAIL() {
-    this.email = this.email.toLowerCase();
+    if (this.email) {
+      this.email = this.email.trim().toLowerCase();
+    }
+  }
+
+  @BeforeUpdate()
+  LOWERCASE_EMAIL_UPDATE() {
+    if (this.email) {
+      this.email = this.email.trim().toLowerCase();
+    }
   }
 }

@@ -47,13 +47,34 @@ export class UserService {
     return userExists;
   }
 
+  async update(id: string, updateUsuarioDto: UpdateUserDto) {
+    try {
+  
+      const user = await this.userRepository.preload({
+        id,
+        ...updateUsuarioDto,
+      });
+      
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado');
+      }
+
+      const usuarioBDUpdated = await this.userRepository.save(user);
+
+      return usuarioBDUpdated;
+      
+    } catch (err) {
+      this.handleDBException(err);
+    }
+  }
+
   private handleDBException(err: any):never {
     if (err.code === '23505') {
       throw new BadRequestException(err.detail);
     }
-    this.logger.error(err.message);
+    console.log(err)
     throw new InternalServerErrorException(
-      'Error inesperado, revisar logs'
+      'Error inesperado,revisar logs'
     );
   }
 }

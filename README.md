@@ -55,7 +55,7 @@ En la **Fase 2**, Aula Libre ofrecerá una experiencia de usuario personalizada 
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone [https://github.com/tu-usuario/aula-libre.git](https://github.com/tu-usuario/aula-libre.git)
+   git clone [https://github.com/samucarrillo17/AulaLibre.git(https://github.com/samucarrillo17/AulaLibre.git)
    cd aula-libre
 
 2. **Instalar dependencias:**

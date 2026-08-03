@@ -55,8 +55,8 @@ En la **Fase 2**, Aula Libre ofrecerá una experiencia de usuario personalizada 
 
 1. **Clonar el repositorio:**
    ```bash
-    git clone https://github.com/samucarrillo17/AulaLibre.git
-    cd aula-libre
+   git clone [https://github.com/tu-usuario/aula-libre.git](https://github.com/tu-usuario/aula-libre.git)
+   cd aula-libre
 
 2. **Instalar dependencias:**
     ``yarn install``
@@ -68,17 +68,3 @@ En la **Fase 2**, Aula Libre ofrecerá una experiencia de usuario personalizada 
 
 5. **Iniciar servidor de desarrollo:**
     ``yarn start:dev``
-
-### Metodos principales
-
-|Metodo |Endpoint   | Descripcion  |
-| ------------ | ------------ | ------------ |
-|POST   | /auth/register  |Registro de nuevos estudiantes   |
-| POST  |/auth/login   |Autenticación y obtención del Token JWT   |
-|GET   |/comments/:courseId   |Obtener comentarios de una materia (Con Caché en Redis)   |
-|POST   |/comments  |Crear un comentario anónimo cifrado en SHA-256|
-|PATCH|/comments/:idComment|Actualizar un comentario|
-
-
-## 🧑‍💻 Autor
-Creado por Samuel Carrillo - Estudiante de Ingeniería de Sistemas.

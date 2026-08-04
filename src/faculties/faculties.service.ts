@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateFacultyDto } from './dto/create-faculty.dto';
 import { UpdateFacultyDto } from './dto/update-faculty.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Faculty } from './entities/faculty.entity';
 import { Repository } from 'typeorm';
+import { handleDBException } from 'src/utilities/helpers/handleDbException';
 
 @Injectable()
 export class FacultiesService {
@@ -12,8 +13,12 @@ export class FacultiesService {
     private readonly facultiesRepository: Repository<Faculty>,
   ) {}
   create(createFacultyDto: CreateFacultyDto) {
-    const facultyPreload = this.facultiesRepository.create(createFacultyDto);
-    return this.facultiesRepository.save(facultyPreload);
+    try {
+      const facultyPreload = this.facultiesRepository.create(createFacultyDto);
+      return this.facultiesRepository.save(facultyPreload);
+    } catch (error) {
+      handleDBException(error);
+    }
   }
 
   findAll() {
@@ -25,7 +30,12 @@ export class FacultiesService {
   }
 
   update(id: string, updateFacultyDto: UpdateFacultyDto) {
-    return this.facultiesRepository.update(id, updateFacultyDto);
+   try {
+       return this.facultiesRepository.update(id, updateFacultyDto);
+   } catch (error) {
+       if (error instanceof NotFoundException) throw error
+       handleDBException(error);
+   }
   }
 
   remove(id: string) {

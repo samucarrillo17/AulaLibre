@@ -10,6 +10,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis, { createKeyv, Keyv } from '@keyv/redis';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { UtilitiesModule } from './utilities/utilities.module';
 
 @Module({
   imports: [
@@ -46,6 +47,8 @@ import { APP_GUARD } from '@nestjs/core';
         },
       ],
     }),
+
+    UtilitiesModule,
   ],
   controllers: [],
   providers: [

@@ -6,7 +6,7 @@ export class Faculty {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column('text')
+  @Column('text', { unique: true })
   name!: string;
 
   @CreateDateColumn({ select: false })

@@ -8,8 +8,9 @@ import { isUUID } from 'class-validator';
 import { FacultiesService } from 'src/faculties/faculties.service';
 import { Faculty } from 'src/faculties/entities/faculty.entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { PaginationCourseDto } from './dto/pagination-course.dto';
 import type{ Cache } from 'cache-manager';
+import { PaginationDto } from 'src/utilities/dto/pagination.dto';
+import { handleDBException } from 'src/utilities/helpers/handleDbException';
 
 @Injectable()
 export class CoursesService {
@@ -31,14 +32,16 @@ export class CoursesService {
     const coursePreload = this.courseRepository.create({
       ...createCourseDto,
       faculty: { id: idFaculty },
-    });
-
-    const course = await this.courseRepository.save(coursePreload);
-
-    return course;
+    })
+    try {
+      const course = await this.courseRepository.save(coursePreload);
+      return course;
+    } catch (error) {
+      handleDBException(error);
+    }
   }
  
-  async findAll(paginationCourseDto: PaginationCourseDto) {
+  async findAll(paginationCourseDto: PaginationDto) {
     const key = 'courses:all';
     const { limit = 10, page = 1 } = paginationCourseDto;
     const offset = (page - 1) * limit;
@@ -72,11 +75,20 @@ export class CoursesService {
         .createQueryBuilder('course')
         .where('course.id = :id', { id: term })
         .getOne();
+
+        if (!course) {
+          throw new NotFoundException(`Course with id "${term}" not found`);
+        }
+        
     } else {
       course = await this.courseRepository
         .createQueryBuilder('course')
         .where('LOWER(course.name) LIKE LOWER(:term)', { term: `%${term}%` })
         .getOne();
+
+        if (!course) {
+          throw new NotFoundException(`Course with name "${term}" not found`);
+        }
     }
 
     return course;
@@ -85,36 +97,37 @@ export class CoursesService {
   async update(id: string, updateCourseDto: UpdateCourseDto) {
     const { facultyId, ...courseRest } = updateCourseDto;
 
-    return await this.dataSource.transaction(async (manager) => {
-      // 1. Cargar el curso existente y fusionar las propiedades del DTO
-      const course = await manager.preload(Course, {
-        id,
-        ...courseRest,
-      });
-
-      if (!course) {
-        throw new NotFoundException(`Course with id "${id}" not found`);
-      }
-
-      // 2. Si se envió una facultad en el DTO, validar que exista
-      if (facultyId) {
-        const existingFaculty = await manager.findOne(Faculty, {
-          where: { id: facultyId },
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const course = await manager.preload(Course, {
+          id,
+          ...courseRest,
         });
 
-        if (!existingFaculty) {
-          throw new NotFoundException(
-            `Faculty with id "${facultyId}" not found`,
-          );
+        if (!course) {
+          throw new NotFoundException(`Course with id "${id}" not found`);
         }
 
-        // Asignamos la nueva entidad de facultad al curso
-        course.faculty = existingFaculty;
-      }
+        if (facultyId) {
+          const existingFaculty = await manager.findOne(Faculty, {
+            where: { id: facultyId },
+          });
 
-      // 3. Guardar todos los cambios dentro de la transacción
-      return await manager.save(Course, course);
-    });
+          if (!existingFaculty) {
+            throw new NotFoundException(
+              `Faculty with id "${facultyId}" not found`,
+            );
+          }
+
+          course.faculty = existingFaculty;
+        }
+
+        return await manager.save(Course, course);
+      });
+    } catch (err) {
+      if (err instanceof NotFoundException) throw err
+      handleDBException(err);
+    }
   }
 
   remove(id: string) {

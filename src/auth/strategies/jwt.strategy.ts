@@ -8,6 +8,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtPayload } from '../interfaces/jwt.interface';
 import { UserService } from 'src/user/user.service';
 import { User } from 'src/user/entities/user.entity';
+import { handleDBException } from 'src/utilities/helpers/handleDbException';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -23,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any | JwtPayload) {
-    try{
+    
       const { id } = payload;
       const user = await this.usuarioRepository.findOne({
         where: { id },
@@ -36,6 +37,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       });
 
+      if (!user) {
+        throw new UnauthorizedException('Token no valido');
+      }
+
       //  if(user?.isActive === false){
       //    throw new UnauthorizedException('Usuario no activo');
       //  }
@@ -43,10 +48,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       //  if (!user || tokenVersion !== user?.tokenVersion) {
       //    throw new UnauthorizedException('Token not valid');
       //  }
-
+      
       return user;
-    }catch(err){
-      console.log(err)
-    }
+    
   }
 }

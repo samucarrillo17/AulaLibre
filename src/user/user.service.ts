@@ -1,14 +1,14 @@
-import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { handleDBException } from 'src/utilities/helpers/handleDbException';
 
 @Injectable()
 export class UserService {
-  private readonly logger = new Logger('UserService');
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -26,8 +26,7 @@ export class UserService {
 
       return rest;
     } catch (err) {
-      this.handleDBException(err);
-      throw err;
+      handleDBException(err);
     }
   }
 
@@ -49,12 +48,11 @@ export class UserService {
 
   async update(id: string, updateUsuarioDto: UpdateUserDto) {
     try {
-  
       const user = await this.userRepository.preload({
         id,
         ...updateUsuarioDto,
       });
-      
+
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
       }
@@ -62,19 +60,8 @@ export class UserService {
       const usuarioBDUpdated = await this.userRepository.save(user);
 
       return usuarioBDUpdated;
-      
     } catch (err) {
-      this.handleDBException(err);
+      handleDBException(err);
     }
-  }
-
-  private handleDBException(err: any):never {
-    if (err.code === '23505') {
-      throw new BadRequestException(err.detail);
-    }
-    console.log(err)
-    throw new InternalServerErrorException(
-      'Error inesperado,revisar logs'
-    );
   }
 }

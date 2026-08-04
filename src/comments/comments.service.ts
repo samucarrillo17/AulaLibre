@@ -16,7 +16,7 @@ import { CoursesService } from 'src/courses/courses.service';
 import { createHash } from 'crypto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-import { PaginationCommentDto } from './dto/pagination-comment.dto';
+import { PaginationDto } from 'src/utilities/dto/pagination.dto';
 
 @Injectable()
 export class CommentsService {
@@ -70,7 +70,7 @@ export class CommentsService {
     return commentBD;
   }
 
-  async findAllComments(idCourse: string, paginationDto: PaginationCommentDto) {
+  async findAllComments(idCourse: string, paginationDto: PaginationDto) {
     const { limit = 10, page = 1 } = paginationDto;
     const offset = (page - 1) * limit;
 

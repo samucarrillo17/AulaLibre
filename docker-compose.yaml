@@ -1,9 +1,9 @@
 services:
-  db:
+  postgres-db:
     image: postgres:14.3
     restart: 'always'
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:${DB_PORT}"
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
@@ -14,6 +14,27 @@ services:
     image: redis:7.2
     restart: 'always'
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:${REDIS_PORT}"
     container_name: aula-libre-redis
+
+  nest-api-aula-libre:
+    build: .
+    container_name: nest-api-aula-libre
+    ports:
+      - "${PORT}:${PORT}"
+    volumes:
+      - .:/usr/src/app               
+      - /usr/src/app/node_modules  
+    command: npm run start:dev       
+    environment:
+      DB_HOST: postgres-db 
+      DB_PORT: ${DB_PORT}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+    depends_on:
+      - postgres-db
+      - redis
   

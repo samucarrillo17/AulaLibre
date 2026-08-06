@@ -3,7 +3,7 @@ import { UserModule } from './user/user.module';
 import { CommentsModule } from './comments/comments.module';
 import { CoursesModule } from './courses/courses.module';
 import { AuthModule } from './auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FacultiesModule } from './faculties/faculties.module';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -19,7 +19,7 @@ import { UtilitiesModule } from './utilities/utilities.module';
     CacheModule.registerAsync({
       isGlobal: true,
       useFactory: async () => ({
-        stores: [createKeyv('redis://localhost:6379')],
+        stores: [createKeyv(`redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`)],
       }),
     }),
 
@@ -31,7 +31,6 @@ import { UtilitiesModule } from './utilities/utilities.module';
       password: process.env.DB_PASSWORD,
       autoLoadEntities: true,
       database: process.env.DB_NAME,
-      synchronize: true,
     }),
     UserModule,
     CommentsModule,

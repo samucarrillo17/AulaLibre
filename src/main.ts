@@ -19,5 +19,6 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new AllExceptionsFilter());
   app.use(helmet());
+  app.enableCors();
 }
 bootstrap();

@@ -32,19 +32,20 @@ export class CoursesService {
     const coursePreload = this.courseRepository.create({
       ...createCourseDto,
       faculty: { id: idFaculty },
-    })
+    });
     try {
       const course = await this.courseRepository.save(coursePreload);
+      this.clearCoursesCache();
       return course;
     } catch (error) {
       handleDBException(error);
     }
   }
- 
+
   async findAll(paginationCourseDto: PaginationDto) {
-    const key = 'courses:all';
     const { limit = 10, page = 1 } = paginationCourseDto;
     const offset = (page - 1) * limit;
+    const key = `courses:page:${page}:limit:${limit}`;
 
     const redisConsult = await this.cacheManager.get(key);
 
@@ -57,39 +58,52 @@ export class CoursesService {
       skip: offset,
     });
 
-    await this.cacheManager.set(key, data, 1000 * 60 * 10);
+    const lastPage: number = Math.ceil(total / limit);
 
-    return {
+    const responsePayload = {
       total,
       page,
       limit,
-      lastPage: Math.ceil(total / limit),
+      lastPage,
       data,
     };
+
+    await this.cacheManager.set(key, responsePayload, 1000 * 60 * 10);
+
+    return responsePayload;
   }
 
   async findOne(term: string) {
-    let course: Course | null;
-    if (isUUID(term)) {
-      course = await this.courseRepository
-        .createQueryBuilder('course')
-        .where('course.id = :id', { id: term })
-        .getOne();
+  
+    const key = `course:term:${term}`;
 
-        if (!course) {
-          throw new NotFoundException(`Course with id "${term}" not found`);
-        }
-        
-    } else {
-      course = await this.courseRepository
-        .createQueryBuilder('course')
-        .where('LOWER(course.name) LIKE LOWER(:term)', { term: `%${term}%` })
-        .getOne();
-
-        if (!course) {
-          throw new NotFoundException(`Course with name "${term}" not found`);
-        }
+  
+    const cachedCourse = await this.cacheManager.get<Course>(key);
+    if (cachedCourse) {
+      return cachedCourse;
     }
+
+
+    const queryBuilder = this.courseRepository
+      .createQueryBuilder('course')
+      .leftJoinAndSelect('course.faculty', 'faculty');
+
+    if (isUUID(term)) {
+      queryBuilder.where('course.id = :id', { id: term });
+    } else {
+      queryBuilder.where('LOWER(course.name) LIKE LOWER(:term)', {
+        term: `%${term}%`,
+      });
+    }
+
+    const course = await queryBuilder.getOne();
+
+    if (!course) {
+      throw new NotFoundException(`Course with term "${term}" not found`);
+    }
+
+  
+    await this.cacheManager.set(key, course, 1000 * 60 * 15);
 
     return course;
   }
@@ -122,15 +136,42 @@ export class CoursesService {
           course.faculty = existingFaculty;
         }
 
+        this.clearCoursesCache();
+        await this.cacheManager.del(`course:term:${id}`);
+
         return await manager.save(Course, course);
       });
     } catch (err) {
-      if (err instanceof NotFoundException) throw err
+      if (err instanceof NotFoundException) throw err;
       handleDBException(err);
     }
   }
 
-  remove(id: string) {
-    return this.courseRepository.softDelete({ id });
+  async remove(id: string) {
+    try {
+      const softDelete = await this.courseRepository.softDelete({ id });
+      if (!softDelete.affected) {
+        throw new NotFoundException(`Course with id "${id}" not found`);
+      }
+      this.clearCoursesCache();
+      await this.cacheManager.del(`course:term:${id}`);
+      return true;
+      
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      handleDBException(error);
+    }
+  }
+
+  async clearCoursesCache() {
+    const store = (this.cacheManager as any).store;
+
+    if (store && typeof store.keys === 'function') {
+      const keys: string[] = await store.keys('courses:*');
+
+      if (keys.length > 0) {
+        await Promise.all(keys.map((key) => this.cacheManager.del(key)));
+      }
+    }
   }
 }

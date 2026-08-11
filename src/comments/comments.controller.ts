@@ -14,8 +14,8 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { Auth } from 'src/auth/decorator/auth.decorator';
 import { GetUser } from 'src/auth/decorator/get-user.decorator';
-import { PaginationCommentDto } from './dto/pagination-comment.dto';
 import { Throttle } from '@nestjs/throttler';
+import { PaginationDto } from 'src/utilities/dto/pagination.dto';
 
 @Controller('comment')
 export class CommentsController {
@@ -36,7 +36,7 @@ export class CommentsController {
   @Auth()
   findAllCommentsToCourse(
     @Param('id',ParseUUIDPipe) idCourse: string,
-    @Query() paginationDto: PaginationCommentDto,
+    @Query() paginationDto: PaginationDto,
   ) {
     return this.commentsService.findAllComments(idCourse, paginationDto);
   }

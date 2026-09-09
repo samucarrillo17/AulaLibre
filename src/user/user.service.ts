@@ -40,6 +40,7 @@ export class UserService {
         'user.name',
         'user.lastName',
         'user.password',
+        'user.role',
       ])
       .getOne();
 

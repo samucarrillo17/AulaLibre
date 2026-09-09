@@ -44,7 +44,6 @@ export class AuthService {
         isActive: usuario.isActive,
       }
     );
-
     return {
       ...rest,
       token

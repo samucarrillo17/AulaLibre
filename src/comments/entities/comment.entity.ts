@@ -22,10 +22,10 @@ export class Comment {
   @Column({ type: 'text', nullable: true })
   reason!: string; 
 
-  @Column('text')
+  @Column('text',{select: false})
   authorHash!: string;
 
-  @CreateDateColumn({ select: false })
+  @CreateDateColumn()
   createdAt!: Date;
 
   @ManyToOne(() => Course, (course) => course.comments)

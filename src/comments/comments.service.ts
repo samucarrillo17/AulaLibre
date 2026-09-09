@@ -36,10 +36,7 @@ export class CommentsService {
     userId: string,
     idCourse: string,
   ) {
-    const key = `comment:${idCourse}`;
-
     const existingCourse = await this.courseService.findOne(idCourse);
-
     if (!existingCourse) {
       throw new NotFoundException('Course not found');
     }
@@ -54,7 +51,9 @@ export class CommentsService {
     });
 
     if (userCommentCount >= 2) {
-      throw new BadRequestException('You can only have 2 comments per course');
+      throw new BadRequestException(
+        'Solo puedes hacer 2 comentarios por curso',
+      );
     }
 
     const commentPreload = this.commentRepository.create({
@@ -63,60 +62,74 @@ export class CommentsService {
       course: { id: idCourse },
     });
 
-    const commentBD = await this.commentRepository.save(commentPreload);
-
-    await this.cacheManager.del(key);
-
-    return commentBD;
+    return await this.commentRepository.save(commentPreload);
   }
 
-  async findAllComments(idCourse: string, paginationDto: PaginationDto) {
+  async findAllComments(
+    idCourse: string,
+    paginationDto: PaginationDto,
+    userId: string,
+  ) {
     const { limit = 10, page = 1 } = paginationDto;
     const offset = (page - 1) * limit;
 
-    const key = `comment:${idCourse}`;
-    const redisConsult = await this.cacheManager.get(key);
-
-    if (redisConsult) {
-      return redisConsult;
-    }
-
+   
     const existingCourse = await this.courseService.findOne(idCourse);
-
     if (!existingCourse) {
       throw new NotFoundException('Course not found');
     }
 
+   
     const [data, total] = await this.commentRepository.findAndCount({
+      select: {
+        id: true,
+        professorName: true,
+        rating: true,
+        reason: true,
+        createdAt: true,
+        authorHash: true,
+      },
       take: limit,
       skip: offset,
       order: { createdAt: 'DESC' },
       where: { course: { id: idCourse } },
     });
 
-    await this.cacheManager.set(key, data, 1000 * 60 * 10);
+    let currentUserHash: string | null = null;
+    if (userId) {
+      currentUserHash = this.createAutorHash(userId, idCourse);
+    }
+
+    const sanitizedComments = data.map(({ authorHash, ...comment }) => ({
+      ...comment,
+      isOwner: currentUserHash ? authorHash === currentUserHash : false,
+    }));
 
     return {
       total,
       page,
       limit,
       lastPage: Math.ceil(total / limit),
-      data,
+      data: sanitizedComments,
     };
   }
-
   async update(
     id: string,
     updateCommentDto: UpdateCommentDto,
     userId: string,
     idCourse: string,
   ) {
-    const existingComment = await this.commentRepository.findOneBy({ id: id });
+    const existingComment = await this.commentRepository.findOne({
+      select: {
+        authorHash: true,
+      },
+      where: { id:id },
+    });
 
     if (!existingComment) {
       throw new NotFoundException('Comment not found');
     }
-    console.log(idCourse);
+
     const hashAutor = this.createAutorHash(userId, idCourse);
 
     if (existingComment.authorHash !== hashAutor) {
@@ -137,10 +150,11 @@ export class CommentsService {
   }
 
   async remove(idComment: string, userId: string, idCourse: string) {
-    const key = 'comments';
-
-    const existingComment = await this.commentRepository.findOneBy({
-      id: idComment,
+    const existingComment = await this.commentRepository.findOne({
+      select: {
+        authorHash: true,
+      },
+      where: { id: idComment },
     });
 
     if (!existingComment) {
@@ -154,8 +168,7 @@ export class CommentsService {
         `The user is not the author of this comment`,
       );
     }
-
-    await this.cacheManager.del(key);
+   
     return await this.commentRepository.delete(idComment);
   }
 
@@ -165,4 +178,6 @@ export class CommentsService {
       .update(`${userId}-${courseId}-${secret}`)
       .digest('hex');
   }
+
+  
 }

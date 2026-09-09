@@ -37,8 +37,9 @@ export class CommentsController {
   findAllCommentsToCourse(
     @Param('id',ParseUUIDPipe) idCourse: string,
     @Query() paginationDto: PaginationDto,
+    @GetUser('id') userId: string,
   ) {
-    return this.commentsService.findAllComments(idCourse, paginationDto);
+    return this.commentsService.findAllComments(idCourse, paginationDto,userId);
   }
 
   @Patch(':idComment')

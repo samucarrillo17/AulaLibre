@@ -26,7 +26,7 @@ export class UserRoleGuard implements CanActivate {
 
     const req = context.switchToHttp().getRequest();
     const user = req.user as User;
-    console.log({usuario: user})
+    
 
     const isAuthorized =validRoles.includes(user.role);
 

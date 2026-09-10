@@ -14,8 +14,6 @@ import { Repository } from 'typeorm';
 import { Comment } from './entities/comment.entity';
 import { CoursesService } from 'src/courses/courses.service';
 import { createHash } from 'crypto';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
 import { PaginationDto } from 'src/utilities/dto/pagination.dto';
 
 @Injectable()
@@ -27,8 +25,6 @@ export class CommentsService {
 
     private readonly courseService: CoursesService,
 
-    @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache,
   ) {}
 
   async create(

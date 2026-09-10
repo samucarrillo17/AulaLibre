@@ -4,14 +4,49 @@
 
 ---
 
+## 💡 El Problema y la Solución
+
+* **El Problema:** La recomendación de profesores y asignaturas suele depender de grupos de chat temporales o recomendaciones de boca en boca. La información se pierde semestre a semestre, es difícil de buscar y carece de estructura.
+* **La Solución:** Una plataforma centralizada con búsqueda por facultad y materia, donde los estudiantes pueden calificar, consultar y publicar opiniones sin comprometer su privacidad ni saturar canales informales.
+
+---
+## 🛠️ Arquitectura y Decisiones de Ingeniería
+
+El desarrollo de la plataforma se centró en la **simplicidad, el rendimiento de base de datos y la privacidad del usuario**, evitando optimizaciones prematuras o capas de complejidad innecesarias.
+
+### 🔒 1. Anonimato Criptográfico (Hash SHA-256)
+Para proteger la identidad del estudiante manteniendo la posibilidad de editar o eliminar sus propias publicaciones:
+* La base de datos **no almacena una relación directa** `userId -> commentId`.
+* Al crear una reseña, se genera un hash seguro utilizando `SHA-256(userId + courseId + secret)`.
+* Durante las consultas (`findAll`), el servidor genera el hash del usuario autenticado en tiempo de ejecución y lo compara con los registros para inyectar un flag booleano `isOwner`. De esta forma, el frontend determina los permisos de edición/eliminación sin revelar la identidad del usuario en la base de datos.
+
+### ⚡ 2. Optimización de Consultas SQL y Conteo Eficiente
+* **Agregaciones ligeras:** Para mostrar el total de reseñas por materia en la lista general, se utiliza una subconsulta SQL (`COUNT(comment.id)`) mapeada a un atributo virtual, evitando el *overfetching* de objetos de comentarios completos.
+* **Indexación compuesta:** Índices en PostgreSQL sobre `(courseId, createdAt DESC)` para acelerar la paginación y el ordenamiento cronológico a nivel de disco.
+* **Diseño pragmático sin sobreingeniería:** Se descartó el uso de caché agresiva en Redis para entidades con mutaciones frecuentes y contexto individualizado (`isOwner`), delegando el rendimiento a consultas PostgreSQL optimizadas que responden en milisegundos.
+
+### 🔄 3. Sincronización Reactiva Frontend / Backend
+* **Full-Stack Type Safety:** Validación de esquemas en ambos lados de la aplicación utilizando **Zod** en el cliente y **DTOs con Class-Validator** en NestJS.
+* **Next.js App Router & Server Actions:** Integración de Server Actions combinados con invalidación controlada (`revalidatePath`) y callbacks de refetch localizado en Client Components para actualizar la interfaz al instante sin recargas completas del navegador.
+
+---
+
 ## 🛠️ Tecnologías Utilizadas
 
-* **Framework:** [NestJS](https://nestjs.com/) (Node.js & TypeScript)
-* **Base de Datos Relacional:** PostgreSQL
+
+### Backend
+* **Framework:** NestJS
 * **ORM:** TypeORM
-* **Caché y Rendimiento:** Redis
+* **Base de Datos:** PostgreSQL
+* **Autenticación & Seguridad:** Passport JWT, Bcrypt, Crypto (SHA-256),Helmet HTTP Headers, Rate Limiting.
 * **Contenedores:** Docker / Docker Compose
-* **Seguridad:** JWT (JSON Web Tokens), Passport, Cifrado SHA-256, Helmet HTTP Headers, Rate Limiting.
+
+### Frontend
+* **Framework:** Next.js (App Router, Server Actions)
+* **Lenguaje:** TypeScript
+* **Estilos & Componentes:** Tailwind CSS, Shadcn UI / Radix Primitives, Lucide Icons
+* **Formularios & Validación:** React Hook Form, Zod
+* **Notificaciones:** React Hot Toast
 
 ---
 
@@ -20,19 +55,18 @@
 * 🔐 **Autenticación y Autorización:**
   * Registro e inicio de sesión con contraseñas encriptadas.
   * Estrategia JWT con control de acceso basado en roles (`STUDENT`, `ADMIN`).
-* 👤 **Gestión de Perfil de Usuario:**
-  * Actualización de datos personales en el módulo de usuarios mediante la reutilización global de Guards de autenticación.
+* **Catálogo de Asignaturas:** Búsqueda en tiempo real y paginación de cursos por facultad con indicadores de cantidad de reseñas.
 * 🛡️ **Evaluaciones y Comentarios Anónimos:**
   * Generación de claves de anonimización (**SHA-256**) para proteger la identidad real del estudiante al publicar opiniones.
-* ⚡ **Optimización de Consultas con Redis:**
-  * Estrategia de caché distribuida para consultas masivas de comentarios organizados por el identificador del curso (`courseId`).
 * 🛡️ **Seguridad e Infraestructura:**
   * **Helmet:** Configuración de cabeceras HTTP de seguridad para prevenir ataques XSS, Clickjacking y Sniffing.
   * **Rate Limiting:** Protección contra ataques de fuerza bruta y saturación de peticiones por IP.
+  * **Detalle y Feedback de Cursos:** Cálculo de valoraciones con estrellas, desglose por docente y estimación de tiempo transcurrido (*time ago*).
+  * **Panel de Administración:** Gestión centralizada de asignaturas y facultades para roles administrativos.
 
 ---
 
-## 🔮 Próximas Funcionalidades (Fase 2 - En desarrollo)
+## 🔮 Próximas Funcionalidades (Fase 2)
 
 En la **Fase 2**, Aula Libre ofrecerá una experiencia de usuario personalizada según el avance académico del estudiante:
 

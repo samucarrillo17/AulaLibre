@@ -7,8 +7,6 @@ import { DataSource, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
 import { FacultiesService } from 'src/faculties/faculties.service';
 import { Faculty } from 'src/faculties/entities/faculty.entity';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type{ Cache } from 'cache-manager';
 import { PaginationDto } from 'src/utilities/dto/pagination.dto';
 import { handleDBException } from 'src/utilities/helpers/handleDbException';
 
@@ -20,8 +18,7 @@ export class CoursesService {
     private readonly facultiService: FacultiesService,
     private readonly dataSource: DataSource,
 
-    @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache,
+  
   ) {}
 
   async createCourse(createCourseDto: CreateCourseDto, idFaculty: string) {
@@ -35,7 +32,6 @@ export class CoursesService {
     });
     try {
       const course = await this.courseRepository.save(coursePreload);
-      this.clearCoursesCache();
       return course;
     } catch (error) {
       handleDBException(error);
@@ -45,17 +41,12 @@ export class CoursesService {
   async findAll(paginationCourseDto: PaginationDto) {
     const { limit = 10, page = 1 } = paginationCourseDto;
     const offset = (page - 1) * limit;
-    const key = `courses:page:${page}:limit:${limit}`;
-
-    const redisConsult = await this.cacheManager.get(key);
-
-    if (redisConsult) {
-      return redisConsult;
-    }
+  
 
     const [data, total] = await this.courseRepository.findAndCount({
       take: limit,
       skip: offset,
+      order: { name: 'ASC' },
     });
 
     const lastPage: number = Math.ceil(total / limit);
@@ -68,21 +59,12 @@ export class CoursesService {
       data,
     };
 
-    await this.cacheManager.set(key, responsePayload, 1000 * 60 * 10);
 
     return responsePayload;
   }
 
   async findOne(term: string) {
-  
-    const key = `course:term:${term}`;
-
-  
-    const cachedCourse = await this.cacheManager.get<Course>(key);
-    if (cachedCourse) {
-      return cachedCourse;
-    }
-
+   
 
     const queryBuilder = this.courseRepository
       .createQueryBuilder('course')
@@ -102,8 +84,6 @@ export class CoursesService {
       throw new NotFoundException(`Course with term "${term}" not found`);
     }
 
-  
-    await this.cacheManager.set(key, course, 1000 * 60 * 15);
 
     return course;
   }
@@ -112,35 +92,34 @@ export class CoursesService {
     const { facultyId, ...courseRest } = updateCourseDto;
 
     try {
-      return await this.dataSource.transaction(async (manager) => {
-        const course = await manager.preload(Course, {
-          id,
-          ...courseRest,
-        });
+      const updatedCourse = await this.dataSource.transaction(
+        async (manager) => {
+          const course = await manager.preload(Course, { id, ...courseRest });
 
-        if (!course) {
-          throw new NotFoundException(`Course with id "${id}" not found`);
-        }
-
-        if (facultyId) {
-          const existingFaculty = await manager.findOne(Faculty, {
-            where: { id: facultyId },
-          });
-
-          if (!existingFaculty) {
-            throw new NotFoundException(
-              `Faculty with id "${facultyId}" not found`,
-            );
+          if (!course) {
+            throw new NotFoundException(`Course with id "${id}" not found`);
           }
 
-          course.faculty = existingFaculty;
-        }
+          if (facultyId) {
+            const existingFaculty = await manager.findOne(Faculty, {
+              where: { id: facultyId },
+            });
 
-        this.clearCoursesCache();
-        await this.cacheManager.del(`course:term:${id}`);
+            if (!existingFaculty) {
+              throw new NotFoundException(
+                `Faculty with id "${facultyId}" not found`,
+              );
+            }
 
-        return await manager.save(Course, course);
-      });
+            course.faculty = existingFaculty;
+          }
+
+          return await manager.save(Course, course);
+        },
+      );
+
+
+      return updatedCourse;
     } catch (err) {
       if (err instanceof NotFoundException) throw err;
       handleDBException(err);
@@ -153,25 +132,12 @@ export class CoursesService {
       if (!softDelete.affected) {
         throw new NotFoundException(`Course with id "${id}" not found`);
       }
-      this.clearCoursesCache();
-      await this.cacheManager.del(`course:term:${id}`);
-      return true;
       
+      return true;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       handleDBException(error);
     }
   }
 
-  async clearCoursesCache() {
-    const store = (this.cacheManager as any).store;
-
-    if (store && typeof store.keys === 'function') {
-      const keys: string[] = await store.keys('courses:*');
-
-      if (keys.length > 0) {
-        await Promise.all(keys.map((key) => this.cacheManager.del(key)));
-      }
-    }
-  }
 }
